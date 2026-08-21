@@ -1,0 +1,29 @@
+#INSTRUCTIONS TO BUILD PROJECT IN WINDOWS
+#set FPGA_ROOT environment variable to the location of your FIFO_queue_project repo
+#eg
+set FPGA_ROOT="C:\projects\FIFO_queue_project"
+#actual windows cmd command 
+set "FPGA_ROOT=%cd%"
+#validate variable
+echo %FPGA_ROOT%
+
+
+
+#run vivado in bash mode
+#set the path to your vivado instalation
+#eg
+set PATH=%PATH%;C:\Xilinx\Vivado\2024.1\bin 
+#launch vivado
+vivado -mode tcl
+
+
+#creat project / build / generate bitfiles with the scripts under
+%FPGA_ROOT%/scripts
+
+
+#create project
+vivado -mode batch -source %FPGA_ROOT%\scripts\create_CDC_project.tcl
+vivado -mode batch -source %FPGA_ROOT%\scripts\generate_TimingReports.tcl
+vivado -mode batch -source %FPGA_ROOT%\scripts\implement_CDC.tcl
+vivado -mode batch -source %FPGA_ROOT%\scripts\simulate_CDC.tcl
+vivado -mode batch -source %FPGA_ROOT%\scripts\synth_CDC.tcl
