@@ -60,6 +60,7 @@ task push_data_multi;
     bit [3:0] data_burst_size;
     bit [3:0] data_burst_idle;
     int burst_count;
+    bit success_write;
     begin
         @(posedge bfm.clk_a);
         data_burst_size = $random(seed); 
@@ -70,7 +71,7 @@ task push_data_multi;
                     data_burst_size = $random(seed);
                     repeat(data_burst_size)begin 
                         if(!bfm.full)  begin
-                            bfm.push_data_single(data_array[burst_count]);
+                            bfm.push_data_single(data_array[burst_count],success_write);
                             `IF_DEBUG_PRINT_ENABLED $display("data_array_temp: %h data_array[burst_count] %h , %d",data_array_temp, data_array[burst_count], burst_count);
                             burst_count=burst_count+1;
                             if(burst_count >= (STIMULUS_DEPTH))begin
@@ -91,6 +92,7 @@ task pop_data_multi(ref logic [DATA_WIDTH-1:0] data_array_pop [0:STIMULUS_DEPTH-
     bit [3:0] data_burst_idle;
     int burst_count;
     logic [DATA_WIDTH-1:0] data_array_temp;
+    bit success_read;
     begin
         @(posedge bfm.clk_b);
         data_burst_size = $random(seed);
@@ -102,7 +104,7 @@ task pop_data_multi(ref logic [DATA_WIDTH-1:0] data_array_pop [0:STIMULUS_DEPTH-
                     @(posedge bfm.clk_b);
                     repeat(data_burst_size)begin 
                         if(!bfm.empty)  begin
-                            bfm.pop_data_single(data_array_temp);
+                            bfm.pop_data_single(data_array_temp,success_read);
                             data_array_pop[burst_count]=data_array_temp;
                             `IF_DEBUG_PRINT_ENABLED $display("data_array_pop[burst_count] %h , %d",data_array_pop[burst_count],burst_count);
                             burst_count=burst_count+1;
@@ -122,8 +124,10 @@ endtask
  
 task execute(); 
     fork
-            push_data_multi(stimulus_array,seed_read);
-            pop_data_multi(fifo_dump_data,seed_write);
+//            push_data_multi(stimulus_array,seed_read);
+//            pop_data_multi(fifo_dump_data,seed_write);
+            push_data_multi_2(stimulus_array,seed_read);
+            pop_data_multi_2(fifo_dump_data,seed_write);
             evaluate();
     join
 endtask
@@ -155,6 +159,83 @@ task evaluate;
     end
     $display("evaluation done");
 endtask
+
+
+
+task push_data_multi_2; // double full flag check  
+    input [DATA_WIDTH-1:0] data_array [0:STIMULUS_DEPTH-1];
+    input int seed;
+    logic [DATA_WIDTH-1:0] data_array_temp;
+    bit [3:0] data_burst_size;
+    bit [3:0] data_burst_idle;
+    int burst_count;
+    bit success_write;
+    begin
+        @(posedge bfm.clk_a);
+        data_burst_size = $random(seed); 
+        data_burst_idle = $random(seed); 
+        burst_count=0;
+        push_data_burst_enabled=1; // blocking assignments to ensure data assigned at the same time as data_burst_size/idle 
+            while(push_data_burst_enabled)begin 
+                    data_burst_size = $random(seed);
+                    repeat(data_burst_size)begin 
+                        if(bfm.almost_full)begin  // wait 2 cycles to avoid losing data 
+                            repeat(6)@(posedge bfm.clk_a);
+                        end
+                        if(!bfm.full)  begin
+                            bfm.push_data_single(data_array[burst_count],success_write);
+                            `IF_DEBUG_PRINT_ENABLED $display("data_array_temp: %h data_array[burst_count] %h , %d",data_array_temp, data_array[burst_count], burst_count);
+                            burst_count=burst_count+1;
+                            if(burst_count >= (STIMULUS_DEPTH))begin
+                                push_data_burst_enabled = 0;
+                                break;
+                            end
+                        end
+                    end
+                    data_burst_idle = $random(seed);
+                    repeat(data_burst_idle)@(posedge bfm.clk_a);
+            end     
+    end
+endtask
+
+
+// double empty flag check 
+task pop_data_multi_2(ref logic [DATA_WIDTH-1:0] data_array_pop [0:STIMULUS_DEPTH-1], input int seed);
+    bit [3:0] data_burst_size;
+    bit [3:0] data_burst_idle;
+    int burst_count;
+    logic [DATA_WIDTH-1:0] data_array_temp;
+    bit success_read;
+    begin
+        @(posedge bfm.clk_b);
+        data_burst_size = $random(seed);
+        data_burst_idle = $random(seed);
+        burst_count     = 0;
+        pop_data_burst_enabled   = 1;
+            while(pop_data_burst_enabled)begin
+                    data_burst_size = $random(seed);
+                    @(posedge bfm.clk_b);
+                    repeat(data_burst_size)begin 
+                        if(bfm.almost_empty)begin  // wait 2 cycles to avoid data corruption
+                            repeat(6)@(posedge bfm.clk_b);
+                        end
+                        if(!(bfm.empty))  begin
+                                    bfm.pop_data_single_2(data_array_temp,success_read);
+                                    data_array_pop[burst_count]=data_array_temp;
+                                    `IF_DEBUG_PRINT_ENABLED $display("safe data_array_pop[burst_count] %h , %d",data_array_pop[burst_count],burst_count);
+                                    burst_count=(success_read)? burst_count+1: burst_count;
+                                    if(burst_count >= (STIMULUS_DEPTH))begin
+                                        pop_data_burst_enabled = 0;
+                                        break;
+                                    end
+                        end
+                    end 
+                    data_burst_idle = $random(seed);
+                    repeat(data_burst_idle)@(posedge bfm.clk_a);
+            end 
+    end    
+endtask
+
 
 
 endclass

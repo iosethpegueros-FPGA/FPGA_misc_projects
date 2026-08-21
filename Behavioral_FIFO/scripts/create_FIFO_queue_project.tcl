@@ -33,7 +33,7 @@ if {[info exists env(FPGA_ROOT)]} {
 	# update_compile_order -fileset sources_1 
 	
 	# saving and closing project 
-	save_project as FIFO_queue_project.xpr
+	#save_project as FIFO_queue_project.xpr
 	close_project 
 	
 } else {
