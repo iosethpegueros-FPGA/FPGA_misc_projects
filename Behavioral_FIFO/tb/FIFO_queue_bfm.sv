@@ -1,6 +1,11 @@
-`define VERBOSE_PRINT_ENABLED 1
-//`define VERBOSE_PRINT_ENABLED `INTERFACE_DEBUG
-`define IF_DEBUG_PRINT_ENABLED if(`VERBOSE_PRINT_ENABLED)  
+///`define VERBOSE_PRINT_ENABLED `INTERFACE_DEBUG // attempt to make debug switches modular, ie global vs local verbosity
+`ifdef INTERFACE_DEBUG
+	`define VERBOSE_PRINT_ENABLED 1
+`else
+	`define VERBOSE_PRINT_ENABLED 0
+`endif
+
+`define IF_DEBUG_PRINT_ENABLED if(`VERBOSE_PRINT_ENABLED)
 
 interface FIFO_queue_bfm;
 
@@ -27,19 +32,19 @@ interface FIFO_queue_bfm;
 
    
 task reset_fifo();
-    $display("fifo_queue reset press: rst_a=%1b",rstn_a);
-    $display("fifo_queue reset press: rst_b=%1b",rstn_b);
+    `IF_DEBUG_PRINT_ENABLED $display("RST INTERFACE: reset press: rst_a=%1b",rstn_a);
+    `IF_DEBUG_PRINT_ENABLED $display("RST INTERFACE: reset press: rst_b=%1b",rstn_b);
     push = 1'b0;
     pop = 1'b0;
     rstn_a = 1'b0;
     rstn_b = 1'b0;
-    $display("fifo_queue reset press: rst_a=%1b",rstn_a);
-    $display("fifo_queue reset press: rst_b=%1b",rstn_b);
+    `IF_DEBUG_PRINT_ENABLED $display("RST INTERFACE: reset press: rst_a=%1b",rstn_a);
+    `IF_DEBUG_PRINT_ENABLED $display("RST INTERFACE: reset press: rst_b=%1b",rstn_b);
     repeat(5) @(posedge clk_a);
     rstn_a = 1'b1;
     rstn_b = 1'b1;
-    $display("fifo_queue reset press: DONE rst_a=%1b",rstn_a);
-    $display("fifo_queue reset press: DONE rst_b=%1b",rstn_b);
+    `IF_DEBUG_PRINT_ENABLED $display("RST INTERFACE: reset press: DONE rst_a=%1b",rstn_a);
+    `IF_DEBUG_PRINT_ENABLED $display("RST INTERFACE: reset press: DONE rst_b=%1b",rstn_b);
 endtask
 
 // clock generation
@@ -54,60 +59,34 @@ task push_data_single;
     input [DATA_WIDTH-1:0] write_data;
     output                  success_write;
     begin
-        `IF_DEBUG_PRINT_ENABLED $display("0 write_data: %h, bfm.datain: %h",write_data,datain_a);
+        `IF_DEBUG_PRINT_ENABLED $display("WR INTERFACE 0: write_data: %h, bfm.datain: %h",write_data,datain_a);
         {datain_a,push} <= {write_data,1'b1};
         @(posedge clk_a);
-        `IF_DEBUG_PRINT_ENABLED $display("1 write_data: %h, datain: %h",write_data,datain_a);
+        `IF_DEBUG_PRINT_ENABLED $display("WR INTERFACE 1: write_data: %h, datain: %h",write_data,datain_a);
         {datain_a,push} <= {write_data,1'b0};
         success_write   <= !full;
         @(posedge clk_a);
         {datain_a,push}  = {write_data,1'b0};
-        `IF_DEBUG_PRINT_ENABLED $display("2 write_data: %h, datain: %h",write_data,datain_a);
+        `IF_DEBUG_PRINT_ENABLED $display("WR INTERFACE 2: write_data: %h, datain: %h",write_data,datain_a);
     end
 endtask
 
-logic [DATA_WIDTH-1:0] read_data_tb;
+
 task pop_data_single;
-    //ref logic[DATA_WIDTH-1:0] read_data;
     output [DATA_WIDTH-1:0] read_data;
     output                  succes_read;
     begin
+        succes_read     <= 0;
         {read_data,pop} <= {dataout_b,1'b1}; //(!empty)?{dataout_b,1'b1}:{dataout_b,1'b0};//
-        `IF_DEBUG_PRINT_ENABLED $display("pre edge data_out: %h , read_data: %h",dataout_b,read_data);
+        `IF_DEBUG_PRINT_ENABLED $display("RD INTERFACE pre edge: data_out: %h , read_data: %h",dataout_b,read_data);
         @(posedge clk_b); // read_data has the previous fifo output ( ie previous popped data), after reset it is 'hx, pop is set at this rising edge.
-//        {read_data,pop} = (!empty)?{dataout_b,1'b1}:{dataout_b,1'b0}; // need to check flag here.
         {read_data,pop} <= {dataout_b,1'b0};
-        succes_read    <= !empty;
-         `IF_DEBUG_PRINT_ENABLED $display("at edge data_out: %h , read_data: %h",dataout_b,read_data);        
+        succes_read     <= !empty; // need to check flag empty flag right here.
+         `IF_DEBUG_PRINT_ENABLED $display("RD INTERFACE at edge: data_out: %h , read_data: %h",dataout_b,read_data);        
         @(posedge clk_b); // read_data is assigned with dataout_b from the previous rising edge, which after reset is 'hx, pop goes low at this edge. this worked for the behavioral implementation of the FIFO
                           // RTL FIFO should get the data after this edge with a blocking assignment
-        {read_data,pop} = {dataout_b,1'b0};  // MAKE IT WORK FIRST, improve it later. Adding blocking assignment for RTL implementation.
-                             // 
-        `IF_DEBUG_PRINT_ENABLED $display("pos edge data_out: %h , read_data: %h",dataout_b,read_data);   
-
-    end
-endtask
-
-
-
-task pop_data_single_2;
-    //ref logic[DATA_WIDTH-1:0] read_data;
-    output [DATA_WIDTH-1:0] read_data;
-    output                  succes_read;
-    begin
-        succes_read    <= 0;
-        {read_data,pop} <= {dataout_b,1'b1}; //(!empty)?{dataout_b,1'b1}:{dataout_b,1'b0};//
-        `IF_DEBUG_PRINT_ENABLED $display("pre edge data_out: %h , read_data: %h",dataout_b,read_data);
-        @(posedge clk_b); // read_data has the previous fifo output ( ie previous popped data), after reset it is 'hx, pop is set at this rising edge.
-//        {read_data,pop} = (!empty)?{dataout_b,1'b1}:{dataout_b,1'b0}; // need to check flag here.
-        {read_data,pop} <= {dataout_b,1'b0};
-        succes_read    <= !empty;
-         `IF_DEBUG_PRINT_ENABLED $display("at edge data_out: %h , read_data: %h",dataout_b,read_data);        
-        @(posedge clk_b); // read_data is assigned with dataout_b from the previous rising edge, which after reset is 'hx, pop goes low at this edge. this worked for the behavioral implementation of the FIFO
-                          // RTL FIFO should get the data after this edge with a blocking assignment
-        {read_data,pop} = {dataout_b,1'b0};  // MAKE IT WORK FIRST, improve it later. Adding blocking assignment for RTL implementation.
-                             // 
-        `IF_DEBUG_PRINT_ENABLED $display("pos edge data_out: %h , read_data: %h",dataout_b,read_data);   
+        {read_data,pop} = {dataout_b,1'b0};  // MAKE IT WORK FIRST, improve it later. Adding blocking assignment for RTL implementation proper functionality.
+        `IF_DEBUG_PRINT_ENABLED $display("RD INTERFACE pos edge: data_out: %h , read_data: %h",dataout_b,read_data);   
 
     end
 endtask

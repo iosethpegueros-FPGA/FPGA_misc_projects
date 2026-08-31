@@ -24,8 +24,7 @@ if {[info exists env(FPGA_ROOT)]} {
 	set_property include_dirs [list "$env(FPGA_ROOT)/tb/"] [get_filesets sim_1]
 
 	#adding constraintse
-	add_files    -fileset constrs_1 -norecurse $env(FPGA_ROOT)/constraints/CDC_top.xdc
-#	import_files -fileset constrs_1            $env(FPGA_ROOT)/constraints/CDC_top.xdc	
+	add_files    -fileset constrs_1 -norecurse $env(FPGA_ROOT)/constraints/CDC_top.xdc	
 
 	set_property -name {xsim.elaborate.debug_level} -value {all} -objects [get_filesets sim_1]
 	

@@ -21,22 +21,27 @@
 `define VERBOSE_PRINT_ENABLED 1
 `define IF_DEBUG_PRINT_ENABLED if(`VERBOSE_PRINT_ENABLED)   
 
-class FIFO_queue_scoreboard;
-
- virtual FIFO_queue_bfm bfm;
+class FIFO_queue_coverage extends uvm_component;
+	`uvm_component_utils(FIFO_queue_coverage)
  
- localparam DATA_WIDTH = 16; //FIFO_queue_bfm::DATA_WIDTH;
- localparam FIFO_DEPTH = 16; //FIFO_queue_bfm::FIFO_DEPTH;
+ 
+	virtual FIFO_queue_bfm bfm;
+ 
+   function new (string name, uvm_component parent);
+      super.new(name, parent);
+   endfunction : new
+
+   function void build_phase(uvm_phase phase);
+      if(!uvm_config_db #(virtual FIFO_queue_bfm)::get(null, "*","bfm", bfm))
+        $fatal("failed to initialize bfm");
+   endfunction : build_phase
  
 
- 
- function new(virtual FIFO_queue_bfm bfm_constructor);
-    bfm=bfm_constructor;
- endfunction: new
 
-task execute;
-	#1 $display("this task executes el coverage y asi ");
-	$display(" NO HAS IMPLEMENTADO EL COVERAGEEEEE !!!! : ) ");
+task run_phase(uvm_phase phase);
+	$display("this task executes coverage    ");
+	$display("COVERAGE IS NOT INPMEMENTED YET");
+	$display("this is just a coverage stub   ");
 endtask
 
 

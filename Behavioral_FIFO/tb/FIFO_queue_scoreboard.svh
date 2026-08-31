@@ -20,23 +20,25 @@
 //////////////////////////////////////////////////////////////////////////////////
 //`define VERBOSE_PRINT_ENABLED 1
 //`define IF_DEBUG_PRINT_ENABLED if(`VERBOSE_PRINT_ENABLED)   
-class FIFO_queue_scoreboard;
-
+class FIFO_queue_scoreboard extends uvm_component;
+	`uvm_component_utils(FIFO_queue_scoreboard)
+	
  virtual FIFO_queue_bfm bfm;
  
-// localparam DATA_WIDTH = 16; //FIFO_queue_bfm::DATA_WIDTH;
-// localparam FIFO_DEPTH = 16; //FIFO_queue_bfm::FIFO_DEPTH;
- 
+   function new (string name, uvm_component parent);
+      super.new(name, parent);
+   endfunction : new
 
- 
- function new(virtual FIFO_queue_bfm bfm_constructor);
-    bfm=bfm_constructor;
- endfunction: new
+   function void build_phase(uvm_phase phase);
+      if(!uvm_config_db #(virtual FIFO_queue_bfm)::get(null, "*","bfm", bfm))
+        $fatal("failed to initialize bfm");
+   endfunction : build_phase
 
-//task execute;
-//	#1 $display("this task executes el escorbording y asi ");
-//	$display(" NO HAS IMPLEMENTADO EL ESCORBORR !!!!!  n_n ");
-//endtask
+task run_phase(uvm_phase phase);
+	$display("this task executes the scoreboard");
+	$display(" SCOREBOARD IS NOT INPMEMENTED YET");
+	$display (" this is just a scoreboard stub " );
+endtask
 
 
 endclass
